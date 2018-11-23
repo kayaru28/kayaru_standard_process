@@ -9,19 +9,159 @@ import inspect
 import ntpath
 import shutil
 
+import kayaru_standard_messages as kstd_m
 
 ERROR_CODE  = 100
 NORMAL_CODE = 0
 
-def cp(file_path,copied_dir_path):
-    if not os.path.exists(file_path):
-        print("FUNC:cp in kstd\t:the file is not existing (" + file_path + ")")
-        return ERROR_CODE
-    else:
-        file_name     = ntpath.basename(file_path)
-        file_path_new = os.path.join(copied_dir_path,file_name) 
-        shutil.copyfile(file_path, file_path_new)
+EC_NOT_FILE_EXIST = 101
+EC_FILE_EXIST     = 102
+EC_NOT_DIR_EXIST  = 103
+EC_DIR_EXIST      = 104
+
+
+###########################################################
+#
+# rapper unit
+#
+###########################################################
+
+def exit():
+    sys.exit()
+
+def joinDirPathAndName(dir_path,file_name):
+    file_path = os.path.join(dir_path,file_name)
+    return file_path
+
+def checkFileExist(file_path):
+    if os.path.exists(file_path):
         return NORMAL_CODE
+    else:
+        return EC_NOT_FILE_EXIST
+
+def checkDirExist(dir_path):
+    if os.path.exists(dir_path):
+        return NORMAL_CODE
+    else:
+        return EC_NOT_DIR_EXIST
+
+###########################################################
+#
+# function set
+#
+###########################################################
+
+
+def cpExec(file_path,copied_dir_path):
+    file_name     = ntpath.basename(file_path)
+    file_path_new = joinDirPathAndName(copied_dir_path,file_name) 
+    shutil.copyfile(file_path, file_path_new)
+
+def cpCheck(file_path,copied_dir_path):
+
+    file_name     = ntpath.basename(file_path)
+    file_path_new = joinDirPathAndName(copied_dir_path,file_name) 
+    exit_code = checkFileExist(file_path_new)
+    if exit_code == NORMAL_CODE:
+        return EC_FILE_EXIST
+
+    exit_code = checkDirExist(copied_dir_path)
+    if not exit_code == NORMAL_CODE:
+        return EC_NOT_DIR_EXIST
+
+    exit_code = checkFileExist(file_path)
+    if not exit_code == NORMAL_CODE:
+        return EC_NOT_FILE_EXIST
+
+    return NORMAL_CODE
+
+def cpResultEcho(file_path,copied_dir_path):
+
+    exit_code = cp_check(file_path,copied_dir_path)
+    message = ""
+    if exit_code == NORMAL_CODE:
+        message = message + kstd_m.messIsReady("cp")
+    elif exit_code == EC_FILE_EXIST:
+        message = message + kstd_m.messErrorOccured()
+        message = message + kstd_m.messExists("new_file")
+    elif exit_code == EC_NOT_DIR_EXIST:
+        message = message + kstd_m.messErrorOccured()
+        message = message + kstd_m.messDoesNotExist(copied_dir_path)
+    elif exit_code == EC_NOT_FILE_EXIST:
+        message = message + kstd_m.messErrorOccured()
+        message = message + kstd_m.messDoesNotExist(file_path)
+    print(message)
+
+def cp(file_path,copied_dir_path):
+    cpResultEcho(file_path,copied_dir_path)
+    exit_code = cp_check(file_path,copied_dir_path)
+    if exit_code == NORMAL_CODE:
+        cp_exec(file_path,copied_dir_path)
+    return NORMAL_CODE
+
+
+def mkdirExec(path):
+    os.mkdir(path)
+
+def mkdirCheck(path):
+    if os.path.exists(path):
+        return EC_DIR_EXIST
+    return NORMAL_CODE
+
+
+#######################################################
+# np unit
+#######################################################
+
+def npNomalizaiton(x, axis=None):
+    min = 0
+    max = x.max(axis=axis, keepdims=True)
+    result = (x-min)/(max-min)
+    return result
+
+def npNomalizaitonMinMax(x, axis=None):
+    min = x.min(axis=axis, keepdims=True)
+    max = x.max(axis=axis, keepdims=True)
+    result = (x-min)/(max-min)
+    return result
+
+def npGetListInsertedLists(np_lists,x_list):
+    np_lists = np.insert(np_lists,0,x_list,axis = 0)
+    return np_lists
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def mkdir(path):
     if os.path.exists(path):
@@ -31,21 +171,11 @@ def mkdir(path):
         os.mkdir(path)
         return NORMAL_CODE
 
-
-def getPaddingString(x_str,length,padding=" "):
-
-    if len(x_str) >= length:
-        return x_str
-    else:
-        for i in range(length - len(x_str) ):
-            x_str = x_str + padding
-        return x_str
-
 def getKeyboadInput():
     ans = input()
     return ans
 
-def execSleep(sec):
+def sleepExec(sec):
     time.sleep(sec)
 
 def left(str, amount):
@@ -79,9 +209,6 @@ def cutStrAfterKey(key,str):
     no  = no + ( len(key) - 1 )
     ans = right( str , len(str) - no )
     return ans
-
-def exit():
-    sys.exit()
 
 
 def patternMatch(key,str):
@@ -348,10 +475,13 @@ def echoBlank():
 def echoStart(process=""):
     print(str(getTimeyyyymmddhhmmss()) + "\tstart process : " + process)
 
+def echoFinish(process=""):
+    print(str(getTimeyyyymmddhhmmss()) + "\tfinish process : " + process)
+
 def echoIsAlready(process=""):
     print(str(getTimeyyyymmddhhmmss()) + "\t" + process + "\tis already")
 
-def echoBar(length="50",mark="*"):
+def echoBar(length=50,mark="*"):
     
     if not (isInt(length)):
         length = 50
@@ -365,7 +495,6 @@ def echoList1d(x_list):
     for row in x_list:
         print(row)
 
-
 def echoIsSetting(process="",var=""):
     print(str(process) + "\t: " + str(var) + "\tis setting")
 
@@ -374,7 +503,6 @@ def echoErrorCodeIs(error_code=""):
 
 def echoAisB(name,var):
     print( str(name) + "\tis\t" + str(var) )
-
 
 #### layer 2 messages
 def echoBlanks(num):
