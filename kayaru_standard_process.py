@@ -18,6 +18,7 @@ EC_NOT_FILE_EXIST = 101
 EC_FILE_EXIST     = 102
 EC_NOT_DIR_EXIST  = 103
 EC_DIR_EXIST      = 104
+EC_NOT_PATH_EXIST = 105
 
 
 ###########################################################
@@ -33,24 +34,81 @@ def joinDirPathAndName(dir_path,file_name):
     file_path = os.path.join(dir_path,file_name)
     return file_path
 
-def checkFileExist(file_path):
+def checkPathExist(file_path):
     if os.path.exists(file_path):
         return NORMAL_CODE
     else:
-        return EC_NOT_FILE_EXIST
+        return EC_NOT_PATH_EXIST
 
-def checkDirExist(dir_path):
-    if os.path.exists(dir_path):
-        return NORMAL_CODE
+###########################################################
+#
+# varidation
+#
+###########################################################
+
+def isNotNull(str):
+    ans = True
+
+    if(str == None):
+        ans = False
+    elif(str == ""):
+        ans = False
+    return ans
+
+def isNull(str):
+    ans = False
+    if(str == None):
+        ans = True
+    elif(str == ""):
+        ans = True
+    return ans
+
+def isInt(val):
+    if type(val) is int:
+        return True
     else:
-        return EC_NOT_DIR_EXIST
+        return False
+
+def isStr(val):
+    if type(val) is str:
+        return True
+    else:
+        return False
+
+def isTuple(target):
+    if isinstance(target, tuple):
+        return True
+    else:
+        return False
+
+def isList(target):
+    if isinstance(target, list):
+        return True
+    else:
+        return False
+
+def isEvenNumber(val):
+
+    if not type(val) is int:
+        return False
+    elif ( val % 2 == 0 ):
+        return True
+    else:
+        return False
+
+def isNpList(val):
+    val_type = type(val)
+    np_list = np.array([])
+    if val_type == type( np_list ):
+        return True
+    else:
+        return False
 
 ###########################################################
 #
-# function set
+# IO function set
 #
 ###########################################################
-
 
 def cpExec(file_path,copied_dir_path):
     file_name     = ntpath.basename(file_path)
@@ -65,35 +123,17 @@ def cpCheck(file_path,copied_dir_path):
     if exit_code == NORMAL_CODE:
         return EC_FILE_EXIST
 
-    exit_code = checkDirExist(copied_dir_path)
+    exit_code = checkPathExist(copied_dir_path)
     if not exit_code == NORMAL_CODE:
         return EC_NOT_DIR_EXIST
 
-    exit_code = checkFileExist(file_path)
+    exit_code = checkPathExist(file_path)
     if not exit_code == NORMAL_CODE:
         return EC_NOT_FILE_EXIST
 
     return NORMAL_CODE
 
-def cpResultEcho(file_path,copied_dir_path):
-
-    exit_code = cp_check(file_path,copied_dir_path)
-    message = ""
-    if exit_code == NORMAL_CODE:
-        message = message + kstd_m.messIsReady("cp")
-    elif exit_code == EC_FILE_EXIST:
-        message = message + kstd_m.messErrorOccured()
-        message = message + kstd_m.messExists("new_file")
-    elif exit_code == EC_NOT_DIR_EXIST:
-        message = message + kstd_m.messErrorOccured()
-        message = message + kstd_m.messDoesNotExist(copied_dir_path)
-    elif exit_code == EC_NOT_FILE_EXIST:
-        message = message + kstd_m.messErrorOccured()
-        message = message + kstd_m.messDoesNotExist(file_path)
-    print(message)
-
 def cp(file_path,copied_dir_path):
-    cpResultEcho(file_path,copied_dir_path)
     exit_code = cp_check(file_path,copied_dir_path)
     if exit_code == NORMAL_CODE:
         cp_exec(file_path,copied_dir_path)
@@ -108,10 +148,55 @@ def mkdirCheck(path):
         return EC_DIR_EXIST
     return NORMAL_CODE
 
+def getKeyboadInput():
+    ans = input()
+    return ans
+
+
 
 #######################################################
 # np unit
 #######################################################
+
+class DtoNpList():
+    def __init__(self):
+        self.np_list = np.array([])
+
+    def clear(self):
+        self.np_list = np.array([])
+
+    def add(self,x_val):
+        self.np_list = np.append(self.np_list,x_val)
+
+    def getList(self):
+        return self.np_list
+
+    def getAttrLength(self):
+        return self.np_list.shape[0]
+
+
+class DtoNpTable():
+    def __init__(self,col_length):
+        self.col_length = col_length
+        self.clear()
+
+    def clear(self):
+        self.np_table = np.empty((0,self.col_length))
+
+    def addList(self,dtoNpList):
+        self.np_table = npGetListInsertedLists(self.np_table , dtoNpList.getList())
+
+    def addTable(self,dtoNpTable):
+        self.np_table = npGetListInsertedLists(self.np_table , dtoNpTable.getTable())
+
+    def getTable(self):
+        return self.np_table
+
+    def getAttrRowLength(self):
+        return self.np_table.shape[0]
+
+    def getAttrColLength(self):
+        return self.np_table.shape[1]   
 
 def npNomalizaiton(x, axis=None):
     min = 0
@@ -155,25 +240,6 @@ def npGetListInsertedLists(np_lists,x_list):
 
 
 
-
-
-
-
-
-
-
-
-def mkdir(path):
-    if os.path.exists(path):
-        print("FUNC:mkdir in kstd\t:the file is existing (" + path + ")")
-        return ERROR_CODE
-    else:
-        os.mkdir(path)
-        return NORMAL_CODE
-
-def getKeyboadInput():
-    ans = input()
-    return ans
 
 def sleepExec(sec):
     time.sleep(sec)
