@@ -9,6 +9,7 @@ import inspect
 import ntpath
 import shutil
 
+from abc import ABCMeta,abstractmethod
 import kayaru_standard_messages as kstd_m
 
 ERROR_CODE  = 100
@@ -158,9 +159,26 @@ def getKeyboadInput():
 # np unit
 #######################################################
 
-class DtoNpList():
-    def __init__(self):
-        self.np_list = np.array([])
+class AbstractDtoNp(metaclass=ABCMeta):
+    @abstractmethod
+    def clear(self):
+        pass
+
+    @abstractmethod
+    def getVariable(self):
+        pass
+
+    @abstractmethod
+    def add(self):
+        pass
+
+
+class DtoNpList(AbstractDtoNp):
+    def __init__(self,x_dtype="float64"):
+        self.np_list = np.array([],dtype = x_dtype)
+
+    def getVariable(self):
+        return self.np_list
 
     def clear(self):
         self.np_list = np.array([])
@@ -168,29 +186,35 @@ class DtoNpList():
     def add(self,x_val):
         self.np_list = np.append(self.np_list,x_val)
 
-    def getList(self):
-        return self.np_list
+    def getListVal(self,index):
+        return self.np_list[index]
 
     def getAttrLength(self):
         return self.np_list.shape[0]
 
 
-class DtoNpTable():
+class DtoNpTable(AbstractDtoNp):
     def __init__(self,col_length):
         self.col_length = col_length
         self.clear()
 
+    def getVariable(self):
+        return self.np_table
+
     def clear(self):
         self.np_table = np.empty((0,self.col_length))
 
-    def addList(self,dtoNpList):
-        self.np_table = npGetListInsertedLists(self.np_table , dtoNpList.getList())
+    def add(self,dto_np):
+        self.np_table = npGetListInsertedLists(self.np_table , dto_np.getVariable())
 
-    def addTable(self,dtoNpTable):
-        self.np_table = npGetListInsertedLists(self.np_table , dtoNpTable.getTable())
+    def addList(self,dto_np_list):
+        self.add(dto_np_list)
 
-    def getTable(self):
-        return self.np_table
+    def addTable(self,dto_np_table):
+        self.add(dto_np_table)
+
+    def addNpArray(self,np_array):
+        self.np_table = npGetListInsertedLists(self.np_table , np_array)
 
     def getAttrRowLength(self):
         return self.np_table.shape[0]
@@ -213,6 +237,127 @@ def npNomalizaitonMinMax(x, axis=None):
 def npGetListInsertedLists(np_lists,x_list):
     np_lists = np.insert(np_lists,0,x_list,axis = 0)
     return np_lists
+
+
+
+
+
+#######################################################
+# compare unit
+#######################################################
+
+def compareNpList(np_list1,np_list2):
+
+    judge_same = True
+
+    size1 = np_list1.shape[0]
+    size2 = np_list2.shape[0]
+
+    if size1 != size2:
+        judge_same = False
+        return judge_same
+
+    for si in range(size1):
+        if np_list1[si] != np_list2[si]:
+            judge_same = False
+
+    return judge_same
+
+def compareDtoNpList(dto_np_list1,dto_np_list2):
+
+    np_list1 = dto_np_list1.getVariable()
+    np_list2 = dto_np_list2.getVariable()
+    return compareNpList(np_list1,np_list2)
+
+def compareNpTable(np_table1,np_table2):
+    ndim1 = np_table1.ndim
+    ndim2 = np_table2.ndim
+
+    if not ndim1 == 2:
+        return False
+
+    if not ndim2 == 2:
+        return False
+
+    for di in range(ndim1):
+        size1 = np_table1.shape[di]
+        size2 = np_table2.shape[di]
+
+        if not size1 == size2:
+            return False
+
+    size10 = np_table1.shape[0]
+    size11 = np_table1.shape[1]
+
+    for s0i in range(size10):
+        for s1i in range(size11):
+            if np_table1[s0i][s1i] != np_table2[s0i][s1i]:
+                return False
+    return True
+
+
+def compareDtoNpTable(dto_np_table1,dto_np_table2):
+    np_table1 = dto_np_table1.getVariable()
+    np_table2 = dto_np_table2.getVariable()
+    return compareNpTable(np_table1,np_table2)
+
+
+def matchRateOfNpList(np_list1,np_list2):
+    size        = np_list1.shape[0]
+    count_match = 0.0
+
+    for si in range(size):
+        if np_list1[si] == np_list2[si]:
+            count_match = count_match + 1.0
+
+    return count_match / size
+
+def matchRateOfDtoNpList(dto_np_list1,dto_np_list2):
+    np_list1 = dto_np_list1.getVariable()
+    np_list2 = dto_np_list2.getVariable()
+
+    return matchRateOfNpList(np_list1,np_list2)
+
+
+
+#######################################################
+# label unit
+#######################################################
+
+
+def createStaticLabelTable(dto_np_table,lists_depth,label):
+
+    list_size = dto_np_table.getAttrColLength()
+
+    for ldi in range(lists_depth):
+        dto_np_list = DtoNpList()
+        createStaticLabelList(dto_np_list,list_size,label)
+        dto_np_table.addList(dto_np_list)
+
+    return NORMAL_CODE
+
+def createStaticLabelList(dto_np_list,list_size,label):
+    for lsi in range(list_size):
+        if lsi == label:
+            flag = 1.0
+        else:
+            flag = 0.0
+        dto_np_list.add(flag)
+
+    return NORMAL_CODE
+
+
+#######################################################
+# csv
+#######################################################
+
+def readCsvFile(file_path):
+    data = np.genfromtxt(file_path,dtype=None,delimiter=",")
+    return data
+
+
+
+
 
 
 
@@ -434,65 +579,6 @@ class CsvWriter():
         self.writer = csv.writer(self.file, lineterminator='\n')
         self.writer.writerows(array_2d)
         return NORMAL_CODE
-
-class CsvReader():
-
-    def __init__(self):
-        self.file = ""
-        self.data = [[]]
-
-    def openFile(self,file_path):
-        if isNull(file_path):
-            echoNullOfAValue(file_path,locals())
-            return ERROR_CODE
-
-        if not os.path.exists(file_path):
-            echoNotExistThatFile(file_path)
-            return ERROR_CODE
-
-        self.file = open( file_path , "r")
-
-        return NORMAL_CODE
-
-    def closeFile(self):
-        if isNull(self.file):
-            echoOpenAnyFile()
-            return ERROR_CODE
-
-        self.file.close()
-
-    def readFile(self):
-
-        if isNull(self.file):
-            echoOpenAnyFile()
-            return ERROR_CODE
-
-        self.data_list = csv.reader(self.file)
-
-        for self.data_tmp in self.data_list:
-            self.data.append(self.data_tmp)
-
-        del self.data[0]
-
-        return NORMAL_CODE
-
-    def getData(self):
-        return self.data
-
-class CsvReaderViaNp():
-
-    #def __init__(self):
-
-    def readFile(self,file_path):
-        if isNull(self.file):
-            echoOpenAnyFile()
-            return ERROR_CODE
-
-        self.data = np.genfromtxt(file_path,dtype=None,delimiter=",")
-        return NORMAL_CODE
-
-    def getData(self):
-        return self.data
 
 
 def getVarName( var, symboltable=locals(), error=None ) :
