@@ -120,7 +120,7 @@ def cpCheck(file_path,copied_dir_path):
 
     file_name     = ntpath.basename(file_path)
     file_path_new = joinDirPathAndName(copied_dir_path,file_name) 
-    exit_code = checkFileExist(file_path_new)
+    exit_code = checkPathExist(file_path_new)
     if exit_code == NORMAL_CODE:
         return EC_FILE_EXIST
 
@@ -135,9 +135,9 @@ def cpCheck(file_path,copied_dir_path):
     return NORMAL_CODE
 
 def cp(file_path,copied_dir_path):
-    exit_code = cp_check(file_path,copied_dir_path)
+    exit_code = cpCheck(file_path,copied_dir_path)
     if exit_code == NORMAL_CODE:
-        cp_exec(file_path,copied_dir_path)
+        cpExec(file_path,copied_dir_path)
     return NORMAL_CODE
 
 
@@ -207,11 +207,11 @@ class DtoNpTable(AbstractDtoNp):
     def add(self,dto_np):
         self.np_table = npGetListInsertedLists(self.np_table , dto_np.getVariable())
 
-    def addList(self,dto_np_list):
-        self.add(dto_np_list)
+    def addList(self,dtoNL):
+        self.add(dtoNL)
 
-    def addTable(self,dto_np_table):
-        self.add(dto_np_table)
+    def addTable(self,dtoNT):
+        self.add(dtoNT)
 
     def addNpArray(self,np_array):
         self.np_table = npGetListInsertedLists(self.np_table , np_array)
@@ -235,10 +235,8 @@ def npNomalizaitonMinMax(x, axis=None):
     return result
 
 def npGetListInsertedLists(np_lists,x_list):
-    np_lists = np.insert(np_lists,0,x_list,axis = 0)
+    np_lists = np.insert(np_lists,np_lists.shape[0],x_list,axis = 0)
     return np_lists
-
-
 
 
 
@@ -263,10 +261,10 @@ def compareNpList(np_list1,np_list2):
 
     return judge_same
 
-def compareDtoNpList(dto_np_list1,dto_np_list2):
+def compareDtoNpList(dtoNL1,dtoNL2):
 
-    np_list1 = dto_np_list1.getVariable()
-    np_list2 = dto_np_list2.getVariable()
+    np_list1 = dtoNL1.getVariable()
+    np_list2 = dtoNL2.getVariable()
     return compareNpList(np_list1,np_list2)
 
 def compareNpTable(np_table1,np_table2):
@@ -296,9 +294,9 @@ def compareNpTable(np_table1,np_table2):
     return True
 
 
-def compareDtoNpTable(dto_np_table1,dto_np_table2):
-    np_table1 = dto_np_table1.getVariable()
-    np_table2 = dto_np_table2.getVariable()
+def compareDtoNpTable(dtoNT1,dtoNT2):
+    np_table1 = dtoNT1.getVariable()
+    np_table2 = dtoNT2.getVariable()
     return compareNpTable(np_table1,np_table2)
 
 
@@ -312,9 +310,9 @@ def matchRateOfNpList(np_list1,np_list2):
 
     return count_match / size
 
-def matchRateOfDtoNpList(dto_np_list1,dto_np_list2):
-    np_list1 = dto_np_list1.getVariable()
-    np_list2 = dto_np_list2.getVariable()
+def matchRateOfDtoNpList(dtoNL1,dtoNL2):
+    np_list1 = dtoNL1.getVariable()
+    np_list2 = dtoNL2.getVariable()
 
     return matchRateOfNpList(np_list1,np_list2)
 
@@ -325,48 +323,74 @@ def matchRateOfDtoNpList(dto_np_list1,dto_np_list2):
 #######################################################
 
 
-def createStaticLabelTable(dto_np_table,lists_depth,label):
+def createStaticLabelTable(dtoNT,lists_depth,label):
 
-    list_size = dto_np_table.getAttrColLength()
+    list_size = dtoNT.getAttrColLength()
 
     for ldi in range(lists_depth):
-        dto_np_list = DtoNpList()
-        createStaticLabelList(dto_np_list,list_size,label)
-        dto_np_table.addList(dto_np_list)
+        dtoNL = DtoNpList()
+        createStaticLabelList(dtoNL,list_size,label)
+        dtoNT.addList(dtoNL)
 
     return NORMAL_CODE
 
-def createStaticLabelList(dto_np_list,list_size,label):
+def createStaticLabelList(dtoNL,list_size,label):
     for lsi in range(list_size):
         if lsi == label:
             flag = 1.0
         else:
             flag = 0.0
-        dto_np_list.add(flag)
+        dtoNL.add(flag)
 
     return NORMAL_CODE
 
 
 #######################################################
-# csv
+# csv unit
 #######################################################
+def getCsvDataTable(file_path):
 
-def readCsvFile(file_path):
-    data = np.genfromtxt(file_path,dtype=None,delimiter=",")
-    return data
+    np_table   = np.loadtxt(file_path,delimiter=",")
 
+    if np_table.ndim == 1:
+        col_length = 1
+        dtoNT = DtoNpTable(col_length)
+        for data in np_table:
+            dtoNT.addNpArray(data)
+    else:
+        col_length = np_table.shape[1]
+        dtoNT = DtoNpTable(col_length)
+        dtoNT.addNpArray(np_table)
 
+    return dtoNT
 
+def writeNewCsvDataList(file_path,dtoNL):
+    open_mode = 'w'
+    _writeCsvDataList(file_path,dtoNL,open_mode)
 
+def writeAddCsvDataList(file_path,dtoNL):
+    open_mode = 'a'
+    _writeCsvDataList(file_path,dtoNL,open_mode)
 
+def writeNewCsvDataTable(file_path,dtoNT):
+    open_mode = 'w'
+    _writeCsvDataTable(file_path,dtoNL,open_mode)
 
+def writeAddCsvDataTable(file_path,dtoNT):
+    open_mode = 'a'
+    _writeCsvDataTable(file_path,dtoNL,open_mode)
 
+def _writeCsvDataList(file_path,dtoNL,open_mode):
+    file = open( file_path , open_mode)
+    writer = csv.writer(file, lineterminator='\n')
+    writer.writerow(dtoNL.getVariable())
+    file.close()
 
-
-
-
-
-
+def _writeCsvDataTable(file_path,dtoNT,open_mode):
+    file = open( file_path , open_mode)
+    writer = csv.writer(file, lineterminator='\n')
+    writer.writerows(dtoNT.getVariable())
+    file.close()
 
 
 
@@ -521,6 +545,9 @@ def isEvenNumber(val):
 # read and write for csv
 #
 ###########################################################
+def readCsvFile(file_path):
+    data = np.genfromtxt(file_path,dtype=None,delimiter=",")
+    return data
 
 class CsvWriter():
     def __init__(self):
